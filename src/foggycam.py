@@ -1,5 +1,4 @@
 """FoggyCam captures Nest camera images and generates a video."""
-
 from urllib.request import urlopen
 import pickle
 import urllib
@@ -274,6 +273,7 @@ class FoggyCam(object):
 
         self.nest_camera_buffer_threshold = config.threshold
 
+        threads = []
         for camera in self.nest_camera_array:
             camera_path = ''
             video_path = ''
@@ -297,9 +297,11 @@ class FoggyCam(object):
             image_thread = threading.Thread(target=self.perform_capture, args=(config, camera, camera_path, video_path))
             image_thread.daemon = True
             image_thread.start()
+            threads.append(image_thread)
 
-        while True:
-            time.sleep(1)
+        for thread in threads:
+            thread.join()
+
 
     def perform_capture(self, config=None, camera=None, camera_path='', video_path=''):
         """Captures images and generates the video from them."""
@@ -307,10 +309,11 @@ class FoggyCam(object):
         camera_buffer = defaultdict(list)
 
         while self.is_capturing:
-            file_id = str(uuid.uuid4().hex)
+            #file_id = str(uuid.uuid4().hex)
 
             utc_date = datetime.utcnow()
             utc_millis_str = str(int(utc_date.timestamp())*1000)
+            file_id = utc_millis_str
 
             print ('Applied cache buster: ', utc_millis_str)
 
@@ -325,7 +328,7 @@ class FoggyCam(object):
 
             try:
                 response = self.merlin.open(request)
-                time.sleep(5)
+                #time.sleep(5)
 
                 with open(camera_path + '/' + file_id + '.jpg', 'wb') as image_file:
                     for chunk in response:
@@ -361,7 +364,7 @@ class FoggyCam(object):
                             use_terminal = True
                         else:
                             ffmpeg_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'tools', 'ffmpeg'))
-                        
+
                         if use_terminal or (os.path.isfile(ffmpeg_path) and use_terminal is False):
                             print ('INFO: Found ffmpeg. Processing video!')
                             target_video_path = os.path.join(video_path, file_id + '.mp4')
