@@ -65,17 +65,17 @@ class FoggyCam(object):
         # if we can avoid logging in.
         try:
             self.unpickle_cookies()
-            
+
             utc_date = datetime.utcnow()
             utc_millis_str = str(int(utc_date.timestamp())*1000)
             self.initialize_twof_session(utc_millis_str)
         except:
             print ("Failed to re-use the cookies. Re-initializing session...")
             self.initialize_session()
-        
+
         self.login()
         self.initialize_user()
-    
+
     def unpickle_cookies(self):
         """Get local cookies and load them into the cookie jar."""
 
@@ -310,10 +310,10 @@ class FoggyCam(object):
 
         while self.is_capturing:
             #file_id = str(uuid.uuid4().hex)
+            file_id = str(datetime.now())
 
             utc_date = datetime.utcnow()
             utc_millis_str = str(int(utc_date.timestamp())*1000)
-            file_id = utc_millis_str
 
             print ('Applied cache buster: ', utc_millis_str)
 
