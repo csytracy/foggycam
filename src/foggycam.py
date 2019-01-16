@@ -15,6 +15,7 @@ from datetime import datetime
 import subprocess
 from azurestorageprovider import AzureStorageProvider
 import shutil
+from util import VideoQueue
 
 class FoggyCam(object):
     """FoggyCam client class that performs capture operations."""
@@ -157,6 +158,7 @@ class FoggyCam(object):
         except urllib.request.HTTPError as err:
             if err.code == 401:
                 error_message = err.read()
+                print(error_message)
                 unauth_content = json.loads(error_message)
 
                 if unauth_content["status"].lower() == "verification_pending":
@@ -307,6 +309,7 @@ class FoggyCam(object):
         """Captures images and generates the video from them."""
 
         camera_buffer = defaultdict(list)
+        video_queue = VideoQueue(50)
 
         while self.is_capturing:
             #file_id = str(uuid.uuid4().hex)
@@ -371,12 +374,13 @@ class FoggyCam(object):
                             process = Popen([ffmpeg_path, '-r', str(config.frame_rate), '-f', 'concat', '-safe', '0', '-i', concat_file_name, '-vcodec', 'libx264', '-crf', '25', '-pix_fmt', 'yuv420p', target_video_path], stdout=PIPE, stderr=PIPE)
                             process.communicate()
                             os.remove(concat_file_name)
+                            video_queue.push(target_video_path)
                             print ('INFO: Video processing is complete!')
 
-                            # Upload the video
-                            storage_provider = AzureStorageProvider()
-
                             if bool(config.upload_to_azure):
+                                # Upload the video
+                                storage_provider = AzureStorageProvider()
+
                                 print ('INFO: Uploading to Azure Storage...')
                                 target_blob = 'foggycam/' + camera + '/' + file_id + '.mp4'
                                 storage_provider.upload_video(account_name=config.az_account_name, sas_token=config.az_sas_token, container='foggycam', blob=target_blob, path=target_video_path)
