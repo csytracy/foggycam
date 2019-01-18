@@ -309,14 +309,14 @@ class FoggyCam(object):
         """Captures images and generates the video from them."""
 
         camera_buffer = defaultdict(list)
-        video_queue = VideoQueue(50)
+        video_queue = VideoQueue(200)
 
         while self.is_capturing:
             #file_id = str(uuid.uuid4().hex)
-            file_id = str(datetime.now())
+            file_id = str(datetime.now()).replace(' ', '_').replace(':', '')
 
             utc_date = datetime.utcnow()
-            utc_millis_str = str(int(utc_date.timestamp())*1000)
+            utc_millis_str = str(int(utc_date.timestamp()*1000))
 
             print ('Applied cache buster: ', utc_millis_str)
 
@@ -339,12 +339,10 @@ class FoggyCam(object):
 
                 # Check if we need to compile a video
                 if config.produce_video:
+                    camera_buffer[camera].append(file_id)
                     camera_buffer_size = len(camera_buffer[camera])
                     print ('[', threading.current_thread().name, '] INFO: Camera buffer size for ', camera, ': ', camera_buffer_size)
-
-                    if camera_buffer_size < self.nest_camera_buffer_threshold:
-                        camera_buffer[camera].append(file_id)
-                    else:
+                    if camera_buffer_size == self.nest_camera_buffer_threshold:
                         camera_image_folder = os.path.join(self.local_path, camera_path)
 
                         # Build the batch of files that need to be made into a video.
