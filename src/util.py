@@ -10,7 +10,7 @@ class VideoQueue:
     def push(self, filename):
         self.q.append(filename)
         if len(self.q) > self.size:
-            os.remove(self.q.pop())
+            os.remove(self.q.popleft())
 
 if __name__ == '__main__':
     q = VideoQueue(50)
