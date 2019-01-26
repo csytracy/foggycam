@@ -369,28 +369,21 @@ class FoggyCam(object):
                         if use_terminal or (os.path.isfile(ffmpeg_path) and use_terminal is False):
                             print ('INFO: Found ffmpeg. Processing video!')
                             target_video_path = os.path.join(video_path, file_id + '.mp4')
-                            process = Popen([ffmpeg_path, '-r', str(config.frame_rate), '-f', 'concat', '-safe', '0', '-i', concat_file_name, '-vcodec', 'libx264', '-crf', '25', '-pix_fmt', 'yuv420p', target_video_path], stdout=PIPE, stderr=PIPE)
-                            process.communicate()
-                            os.remove(concat_file_name)
-                            video_queue.push(target_video_path)
-                            print ('INFO: Video processing is complete!')
-
-                            if bool(config.upload_to_azure):
-                                # Upload the video
-                                storage_provider = AzureStorageProvider()
-
-                                print ('INFO: Uploading to Azure Storage...')
-                                target_blob = 'foggycam/' + camera + '/' + file_id + '.mp4'
-                                storage_provider.upload_video(account_name=config.az_account_name, sas_token=config.az_sas_token, container='foggycam', blob=target_blob, path=target_video_path)
-                                print ('INFO: Upload complete.')
-
+                            cmd = ' '.join([ffmpeg_path, '-r', str(config.frame_rate), '-f', 'concat', '-safe', '0', '-i', concat_file_name, '-vcodec', 'libx264', '-crf', '25', '-pix_fmt', 'yuv420p', target_video_path])
                             # If the user specified the need to remove images post-processing
                             # then clear the image folder from images in the buffer.
                             if config.clear_images:
+                                rm_args = ['rm', concat_file_name]
                                 for buffer_entry in camera_buffer[camera]:
-                                    deletion_target = os.path.join(camera_path, buffer_entry + '.jpg')
-                                    print ('INFO: Deleting ' + deletion_target)
-                                    os.remove(deletion_target)
+                                    rm_args.append(os.path.join(camera_path, buffer_entry + '.jpg'))
+                                rm_cmd = ' '.join(rm_args)
+                                cmd = 'if ' + cmd + '; then ' + rm_cmd + '; fi'
+                            print(cmd)
+                            process = Popen(cmd, shell = True)
+                            video_queue.push(target_video_path)
+                            print ('INFO: Video processing is complete!')
+
+
                         else:
                             print ('WARNING: No ffmpeg detected. Make sure the binary is in /tools.')
 
